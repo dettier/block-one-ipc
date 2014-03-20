@@ -1,0 +1,37 @@
+{
+    "name": "block-one-ipc",
+    "version": "0.1.0",
+    "description": "block-one ipc communication module",
+    "main"  : "./lib/index.js",
+    "scripts": {
+        "postinstall" : "node ./node_modules/gulp/bin/gulp compile",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "http://github.com/dettier/block-one-ipc.git"
+    },
+    "author": "ugeng",
+    "license": "BSD-2-Clause",
+    "bugs": {
+    "url": "https://github.com/dettier/block-one-ipc/issues"
+    },
+    "dependencies": {
+        "gulp": "~3.5.6",
+        "coffee-script": "~1.7.1",
+        "lodash": "~2.4.1",
+        "node-uuid": "~1.4.1",
+        "cron": "~1.0.3",
+        "zmq": "~2.6.0"
+    },
+    "devDependencies": {
+        "mocha": "~1.17.0",
+        "chai": "~1.8.1",
+        "sinon": "~1.7.3",
+        "gulp-util": "~2.2.12",
+        "gulp": "~3.5",
+        "gulp-coffee": "~1.2.5",
+        "gulp-watch": "~0.5.0",
+        "gulp-mocha": "~0.4.0"
+    }
+}
