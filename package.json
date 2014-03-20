@@ -17,7 +17,11 @@
     "url": "https://github.com/dettier/block-one-ipc/issues"
     },
     "dependencies": {
+        "gulp-util": "~2.2.12",
         "gulp": "~3.5.6",
+        "gulp-coffee": "~1.2.5",
+        "gulp-watch": "~0.5.0",
+        "gulp-mocha": "~0.4.0",        
         "coffee-script": "~1.7.1",
         "lodash": "~2.4.1",
         "node-uuid": "~1.4.1",
@@ -27,11 +31,6 @@
     "devDependencies": {
         "mocha": "~1.17.0",
         "chai": "~1.8.1",
-        "sinon": "~1.7.3",
-        "gulp-util": "~2.2.12",
-        "gulp": "~3.5",
-        "gulp-coffee": "~1.2.5",
-        "gulp-watch": "~0.5.0",
-        "gulp-mocha": "~0.4.0"
+        "sinon": "~1.7.3"
     }
 }
