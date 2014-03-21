@@ -5,11 +5,13 @@ _               = require 'lodash'
 
 class IPCClient 
     
-    constructor : (connectionString, @options, @parser = JSON, hb = true) ->
+    constructor : (connectionString, @options, @parser = JSON) ->
         
         if not _.isString connectionString
             return this
 
+        @sockets = {}
+            
         @uuidBase = uuid.v4().substring(0, 24).replace(/[-]+/g, '')
         @uuidCounter = 0
         
@@ -23,26 +25,6 @@ class IPCClient
             @message(reply)
 
         @socket.connect(connectionString)
-
-        if hb
-            @heartbeatCnt = -1
-            
-            @heartbeatSocket = zmq.socket 'sub'
-            @heartbeatSocket.on "message", (hb) =>
-                @heartbeat(hb)
-
-            hbPort = connectionString.slice(connectionString.lastIndexOf(':')+1)
-            
-            hbPort = parseInt hbPort
-            
-            hbPort++
-            
-            hbConnectionString = connectionString.slice 0, -hbPort.toString().length
-            
-            hbConnectionString += hbPort.toString()
-            
-            @heartbeatSocket.connect(hbConnectionString);
-            @heartbeatSocket.subscribe('')
 
 
     register : (callback)->
@@ -64,6 +46,28 @@ class IPCClient
             
             func(message.error, message.res)
 
+    invoke : (func, args, callback) ->
+
+        if not _.isString func
+            return callback? { error : 'invalid function name' }
+
+        uuid = @fastUUID()
+
+        hashKey = @buildHashKey(func, uuid)
+
+        @callbacks[hashKey] = callback
+
+        obj =
+            id : uuid
+            clientId : @clientId
+            func : func
+            arguments : args
+
+        str = @parser.stringify(obj)
+
+        @socket.send str
+        
+
     heartbeat : (message) ->
         message = message.toString()
         message = @parser.parse message
@@ -79,29 +83,28 @@ class IPCClient
 
         @heartbeatCnt = message.cnt
         
-    invoke : (func, args, callback) ->
-        
-        if not _.isString func
-            return callback? { error : 'invalid function name' }
-            
-        uuid = @fastUUID()
-        
-        hashKey = @buildHashKey(func, uuid)
-            
-        @callbacks[hashKey] = callback
-        
-        obj =
-            id : uuid
-            clientId : @clientId
-            func : func
-            arguments : args
-        
-        str = @parser.stringify(obj)
+    
+    subError : (channel, err, func) ->
 
-        @socket.send str
+        console.log channel, 'error:', err
+
         
+    
     subscribe : (connString, channel, func) ->
+        socket = @sockets[channel] = zmq.socket 'sub'
 
+        socket.on "message", (msg) =>
+            
+            return func msg
+
+        socket.on "error", (err) =>
+            
+            @subError(channel, err, func)
+
+        socket.connect connString
+        socket.subscribe channel        
+
+        
     fastUUID : () ->
         counter = @uuidCounter++
         #Just in the case user sends over 281 trillion messages?
