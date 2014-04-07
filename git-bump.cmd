@@ -14,4 +14,4 @@ echo creating tag %version%..
 call git tag -a %version% -m "%version%"
 
 echo pushing..
-call git push
+call git push origin %version%
