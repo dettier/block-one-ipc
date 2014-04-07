@@ -2,6 +2,10 @@ zmq         = require 'zmq'
 cron        = require 'cron'
 _           = require 'lodash'
 
+defaultPort     = '170077'
+defaultPubPort  = '17088'
+
+
 class IPCServer
 
     constructor : (@serverContext, @options, @parser = JSON, @hbSeconds = 2) ->
@@ -9,13 +13,17 @@ class IPCServer
         @clients = {}
         
         @socket = zmq.socket 'rep'
+
+        @heartbeatCnt = 0
+
+        @pubSockets = {}
+        @existingAddresses = {}
         
         if @hbSeconds?
             
-            @heartbeatCnt = 0
-            
-            @heartbeatSocket = zmq.socket 'pub'
-
+            if @hbSeconds > 60
+                @hbSeconds = 60
+                
             new cron.CronJob "*/#{@hbSeconds} * * * * *", (() => @.heartbeat()), null, true
         
         @socket.on "message", (reply) => 
@@ -68,12 +76,22 @@ class IPCServer
 
         hb = { type: 1, cnt : @heartbeatCnt++ }
 
-        hb  = @parser.stringify(hb)
-
-        result = @heartbeatSocket.send hb
+        result = @publish 'heartbeat', '', 'hb', hb
 
         #console.log 'heartbeat', @heartbeatCnt, result
+    
+
+    publish : (channel, subchannel, event, data) ->
+
+        data = @parser.stringify data
+
+        message = channel? || '' + '|' + subchannel? || '' + '|' + event? || '' + '|' + data
+
+        sockets = @pubSockets[channel]
         
+        _.forEach sockets, (socket) ->
+            socket.send message
+
 
     reply : (id, funcName, error = null, result = undefined) ->
         
@@ -83,23 +101,45 @@ class IPCServer
 
         @socket.send reply
         
-           
-    bind : (type='tcp', address='127.0.0.1', port='17077') ->
+    
+    bind : (type='tcp', address='127.0.0.1', port=defaultPort) ->
 
         if not _.isString address
             return false
-            
-        string = "#{type}://#{address}:#{port}"
+
+        if type == 'tcp'
+            string = "#{type}://#{address}:#{port}"
+        else
+            string = "#{type}://#{address}"            
             
         @socket.bindSync string
         
-        hbPort = parseInt(port)+1
-
-        hbString = "#{type}://#{address}:#{hbPort}"
-
-        @heartbeatSocket.bindSync hbString
+    
+    createPubChannel : (channel, type='tcp', address='127.0.0.1', port=defaultPubPort) ->
         
-    bindPub : () ->
+        if type == 'tcp'
+            string = "#{type}://#{address}:#{port}"
+        else 
+            string = "#{type}://#{address}"
+
+        #проверяем, создан ли сокет с заданным адресом
+        addrs = @existingAddresses[channel] ?= []        
+            
+        if addrs[string]?
+            return
+
+        @existingAddresses[channel].push string
         
+        sockets = @pubSockets[channel] ?= []
+        
+        socket = zmq.socket 'pub'
+
+        #ставим публикатор на указанный адрес
+        socket.bindSync string
+
+        sockets.push socket
+
+        @pubSockets[channel] = sockets
+
    
 module.exports = IPCServer

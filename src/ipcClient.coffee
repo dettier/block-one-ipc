@@ -10,6 +10,8 @@ class IPCClient
         if not _.isString connectionString
             return this
 
+        @subscriptors = {}
+            
         @sockets = {}
             
         @uuidBase = uuid.v4().substring(0, 24).replace(/[-]+/g, '')
@@ -90,19 +92,44 @@ class IPCClient
 
         
     
-    subscribe : (connString, channel, func) ->
+    subscribe : (connString, channel, subchannel, event, func) ->
+        
+        if _.isFunction subchannel
+            func = subchannel
+            event = ''
+            subchannel = ''
+        else if _.isFunction event
+            func = event
+            event = ''
+        
         socket = @sockets[channel] = zmq.socket 'sub'
 
-        socket.on "message", (msg) =>
+        filter = channel? || '' + '|' + subchannel? || '' + '|' + event? || '' + '|'
+        
+        @subscriptors[filter] = func
+        
+        socket.on "message", (message) =>
+
+            message = message.toString()
             
-            return func msg
+            parts = message.split "|"
+            
+            channel = parts[0]
+            subchannel = parts[1]
+            event = parts[2]
+            data = parts[3]
+            
+            data = @parser.parse data
+            
+            return func message
 
         socket.on "error", (err) =>
             
             @subError(channel, err, func)
 
         socket.connect connString
-        socket.subscribe channel        
+
+        socket.subscribe filter        
 
         
     fastUUID : () ->
