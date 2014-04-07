@@ -8,7 +8,7 @@
     },
     "repository": {
         "type": "git",
-        "url": "http://github.com/dettier/block-one-ipc.git"
+        "url": "git://github.com/dettier/block-one-ipc.git"
     },
     "author": "ugeng",
     "license": "BSD-2-Clause",
