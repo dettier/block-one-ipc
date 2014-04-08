@@ -104,7 +104,7 @@ class IPCClient
         
         socket = @sockets[channel] = zmq.socket 'sub'
 
-        filter = channel? || '' + '|' + subchannel? || '' + '|' + event? || '' + '|'
+        filter = channel || ''
         
         @subscriptors[filter] = func
         
@@ -112,24 +112,23 @@ class IPCClient
 
             message = message.toString()
             
-            parts = message.split "|"
+            parts = message.split " "
             
             channel = parts[0]
-            subchannel = parts[1]
-            event = parts[2]
-            data = parts[3]
+            data = parts[1]
             
             data = @parser.parse data
             
-            return func message
+            data.channel = channel
+            return func data
 
         socket.on "error", (err) =>
             
             @subError(channel, err, func)
 
-        socket.connect connString
-
-        socket.subscribe filter        
+        sock = socket.connect connString
+        
+        socket.subscribe filter
 
         
     fastUUID : () ->

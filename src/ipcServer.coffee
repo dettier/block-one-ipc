@@ -85,7 +85,8 @@ class IPCServer
 
         data = @parser.stringify data
 
-        message = channel? || '' + '|' + subchannel? || '' + '|' + event? || '' + '|' + data
+        #message = (channel || '') + '|' + (subchannel || '') + '|' + (event || '') + '|' + data
+        message = (channel || '') + ' ' + data
 
         sockets = @pubSockets[channel]
         
