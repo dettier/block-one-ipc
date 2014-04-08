@@ -2,7 +2,7 @@ zmq         = require 'zmq'
 cron        = require 'cron'
 _           = require 'lodash'
 
-defaultPort     = '170077'
+defaultPort     = '17077'
 defaultPubPort  = '17088'
 
 
