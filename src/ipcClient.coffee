@@ -3,16 +3,22 @@ uuid            = require 'node-uuid'
 
 _               = require 'lodash'
 
+DEFAULT_SEND_TIMEOUT = 5000
+
 class IPCClient 
     
-    constructor : (connectionString, @options, @parser = JSON) ->
+    constructor : (connectionString, options, @parser = JSON) ->
         
         if not _.isString connectionString
             return this
 
         @subscriptors = {}
-            
+
+        @timeouts = {}
+        
         @sockets = {}
+        
+        @sendTimeout = options?.sendTimeout || DEFAULT_SEND_TIMEOUT
             
         @uuidBase = uuid.v4().substring(0, 24).replace(/[-]+/g, '')
         @uuidCounter = 0
@@ -20,17 +26,25 @@ class IPCClient
         @callbacks = {}
         @clientId = uuid.v1()
         @clientId = @clientId.toString().replace(/[-]+/g, '')
-        
+
         @socket = zmq.socket 'req'
-        
+
         @socket.on "message", (reply) => 
             @message(reply)
+
+        @socket.on "error", (error) =>
+            @error(error)            
 
         @socket.connect(connectionString)
 
 
     register : (callback)->
         @invoke 'register', @clientId, callback
+
+
+    error : (error) ->
+        
+        console.log error
         
 
     message : (message) ->
@@ -40,6 +54,9 @@ class IPCClient
 
         if message.type == 2
             hashKey = @buildHashKey(message.func, message.id)
+            
+            clearTimeout @timeouts[hashKey]
+            delete @timeouts[hashKey]
 
             func = @callbacks[hashKey]
             
@@ -68,6 +85,16 @@ class IPCClient
         str = @parser.stringify(obj)
 
         @socket.send str
+        
+        @timeouts[hashKey] = setTimeout =>
+
+            #have to remove callback from registered callbacks hash to avoid second call 
+            delete @callbacks[hashKey]
+            #and call callback with timeout error
+            callback new Error('Timeout of', @sendTimeout, 'msec exceeded')
+
+        , @sendTimeout
+            
         
 
     heartbeat : (message) ->
