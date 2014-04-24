@@ -1,6 +1,6 @@
 {
     "name": "block-one-ipc",
-    "version": "0.1.7",
+    "version": "0.1.8",
     "description": "block-one ipc communication module",
     "main"  : "./lib/index.js",
     "scripts": {

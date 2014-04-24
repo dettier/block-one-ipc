@@ -64,6 +64,8 @@ class IPCClient
                 return
             
             func(message.error, message.res)
+            
+            @callbacks[hashKey] = undefined
 
     invoke : (func, args, callback) ->
 
@@ -89,7 +91,7 @@ class IPCClient
         @timeouts[hashKey] = setTimeout =>
 
             #have to remove callback from registered callbacks hash to avoid second call 
-            delete @callbacks[hashKey]
+            @callbacks[hashKey] = undefined 
             #and call callback with timeout error
             callback new Error('Timeout of', @sendTimeout, 'msec exceeded')
 
