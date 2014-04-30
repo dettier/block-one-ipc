@@ -43,7 +43,6 @@ gulp.task 'watch-and-compile', () ->
     return
 
 gulp.task 'copy-files', () ->
-    console.log 'COPY'
     gulp.src(['./src/**/*.json'])
         .pipe(watch())
         .pipe(gulp.dest('./lib'))

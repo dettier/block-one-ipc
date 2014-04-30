@@ -3,6 +3,10 @@ uuid            = require 'node-uuid'
 
 _               = require 'lodash'
 
+MessageTypes    = require('block-one-common').MessageTypes
+TypesToFuncs    = require('block-one-common').TypesToFuncs
+FuncsToTypes    = require('block-one-common').FuncsToTypes
+
 DEFAULT_SEND_TIMEOUT = 5000
 
 class IPCClient 
@@ -17,13 +21,18 @@ class IPCClient
         @timeouts = {}
         
         @sockets = {}
+
+        @callbacks = {}
+        
+        @statelessCallbacks = {}
+
+        @statelessMessageTypes = _.keys TypesToFuncs
         
         @sendTimeout = options?.sendTimeout || DEFAULT_SEND_TIMEOUT
             
         @uuidBase = uuid.v4().substring(0, 24).replace(/[-]+/g, '')
         @uuidCounter = 0
         
-        @callbacks = {}
         @clientId = uuid.v1()
         @clientId = @clientId.toString().replace(/[-]+/g, '')
 
@@ -45,32 +54,76 @@ class IPCClient
     error : (error) ->
         
         console.log error
-        
 
+    
+    # Метод регистрации коллбэка для реакции на сообщение с определенным типом 
+    on : (funcName, func) -> 
+        @statelessCallbacks[funcName] = func
+
+
+    onInvokeReply : (parsedMessage) ->
+    
+        hashKey = @buildHashKey(parsedMessage.func, parsedMessage.id)
+
+        clearTimeout @timeouts[hashKey]
+        delete @timeouts[hashKey]
+
+        func = @callbacks[hashKey]
+
+        if not _.isFunction func
+            return
+
+        func(parsedMessage.error, parsedMessage.res)
+
+        @callbacks[hashKey] = undefined
+        
+        
+    onStatelessReply : (parsedMessage) ->
+        
+        callback = @statelessCallbacks[parsedMessage.func]
+        
+        
     message : (message) ->
 
         message = message.toString()
         message = @parser.parse message
 
-        if message.type == 2
-            hashKey = @buildHashKey(message.func, message.id)
+        if message.type == MessageTypes.InvokeSyncReply
+            @onInvokeReply message
+        else if @statelessMessageTypes.indexOf(message.type) >= 0
+            @onStatelessReply message
+        else 
+            console.log 'IPClient: Unhandled message: %j', message 
             
-            clearTimeout @timeouts[hashKey]
-            delete @timeouts[hashKey]
+    #Метод используется для обмена stateless сообщениями, то есть мы не знаем, когда придет ответ,
+    #поэтому не блокируем процесс на ожидании, и предполагаем, что ответ будет содержать все данные, 
+    #необходимые для корректной его обработки, независимо от того, вылетал ли клиент или сервер в процессе roundtrip-а
+    request : (func, args) ->
+        
+        if not _.isString func
+            return isError: true, error : 'invalid function name'
 
-            func = @callbacks[hashKey]
+        type   = FuncsToTypes[func]
+        
+        if not type?
+            return isError: true, error : 'function not allowed for stateless messaging'
             
-            if not _.isFunction func
-                return
-            
-            func(message.error, message.res)
-            
-            @callbacks[hashKey] = undefined
+        obj =
+            id          : uuid
+            clientId    : @clientId
+            func        : func
+            arguments   : args
+            type        : FuncsToTypes[func]
 
+        str = @parser.stringify(obj)
+
+        @socket.send str
+        
+            
     invoke : (func, args, callback) ->
 
         if not _.isString func
-            return callback? { error : 'invalid function name' }
+            return callback? error : 'invalid function name'
 
         uuid = @fastUUID()
 
@@ -79,10 +132,11 @@ class IPCClient
         @callbacks[hashKey] = callback
 
         obj =
-            id : uuid
-            clientId : @clientId
-            func : func
-            arguments : args
+            id          : uuid
+            clientId    : @clientId
+            func        : func
+            arguments   : args
+            type        : MessageTypes.InvokeSyncRequest
 
         str = @parser.stringify(obj)
 
@@ -97,7 +151,6 @@ class IPCClient
 
         , @sendTimeout
             
-        
 
     heartbeat : (message) ->
         message = message.toString()

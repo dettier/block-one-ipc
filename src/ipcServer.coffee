@@ -2,6 +2,10 @@ zmq         = require 'zmq'
 cron        = require 'cron'
 _           = require 'lodash'
 
+MessageTypes    = require('block-one-common').MessageTypes
+TypesToFuncs    = require('block-one-common').TypesToFuncs
+FuncsToTypes    = require('block-one-common').FuncsToTypes
+
 defaultPort     = '17077'
 defaultPubPort  = '17088'
 
@@ -26,11 +30,11 @@ class IPCServer
                 
             new cron.CronJob "*/#{@hbSeconds} * * * * *", (() => @.heartbeat()), null, true
         
-        @socket.on "message", (reply) => 
-            @.message(reply)
+        @socket.on "message", (req) => 
+            @message req
 
         @socket.on "error", (error) => 
-            @.error(error)
+            @error error
 
     getClientContext : (clientId) ->
 
@@ -58,11 +62,11 @@ class IPCServer
         func = @serverContext[message.func]
 
         if not _.isFunction func
-            return @reply message.id, message.func, 'action not registered'
+            return @reply message.id, message.func, message.type + 1, 'action not registered'
 
         func ctx, message.arguments, (error, result) =>
 
-            @reply message.id, message.func, error, result
+            @reply message.id, message.func, message.type + 1, error, result
 
             
     error : (error) ->
@@ -94,11 +98,11 @@ class IPCServer
             socket.send message
 
 
-    reply : (id, funcName, error = null, result = undefined) ->
+    reply : (id, funcName, type = MessageTypes.InvokeSyncReply, error = null, result = undefined) ->
         
-        reply = { type: 2, id: id, func: funcName, error : error, res : result }
+        reply = { type: type, id: id, func: funcName, error : error, res : result }
 
-        reply  = @parser.stringify(reply)
+        reply  = @parser.stringify reply
 
         @socket.send reply
         

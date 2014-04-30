@@ -1,6 +1,6 @@
 {
     "name": "block-one-ipc",
-    "version": "0.1.8",
+    "version": "0.1.9",
     "description": "block-one ipc communication module",
     "main"  : "./lib/index.js",
     "scripts": {
@@ -25,7 +25,8 @@
         "lodash": "~2.4.1",
         "node-uuid": "~1.4.1",
         "cron": "~1.0.3",
-        "zmq": "~2.6.0"
+        "zmq": "~2.6.0",
+        "block-one-common": "git://github.com/dettier/block-one-common.git#0.1.3"
     },
     "devDependencies": {
         "mocha": "~1.17.0",
