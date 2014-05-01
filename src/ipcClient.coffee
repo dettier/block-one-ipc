@@ -84,7 +84,7 @@ class IPCClient
         handler = @statelessCallbacks[parsedMessage.type.toString()]
         
         if handler?
-            handler parsedMessage.error, parsedMessage.res 
+            handler parsedMessage.error, parsedMessage.res, parsedMessage.context 
             
         undefined
         

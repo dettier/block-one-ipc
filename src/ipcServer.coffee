@@ -107,7 +107,7 @@ class IPCServer
 
         #we have to fully retransmit message arguments for correct handling of stateless messages  
         if @statelessMessageTypes.indexOf(type.toString()) >= 0
-            reply.args = args    
+            reply.context = args    
         
         reply  = @parser.stringify reply
 
