@@ -9,13 +9,13 @@ Current version 0.2.0
 
 в раздел "dependencies" файла package.json проекта прописать:
 ```
-"block-one-ipc": "git://github.com/dettier/block-one-ipc.git#v0.1.9"
+"block-one-ipc": "git://github.com/dettier/block-one-ipc.git#v0.2.0"
 ```
 и запустить в командной строке 
 ```npm install```
 
 либо запустить в командной строке
-```npm install git://github.com/dettier/block-one-ipc.git#v0.1.9```
+```npm install git://github.com/dettier/block-one-ipc.git#v0.2.0```
 
 ## Подключение
 
