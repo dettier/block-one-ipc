@@ -1,7 +1,7 @@
 block-one-ipc
 =============
 
-Current version 0.1.9
+Current version 0.2.0
 
 # Block-One Inter-Process Communication Module.
 
