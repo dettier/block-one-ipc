@@ -2,9 +2,9 @@ zmq         = require 'zmq'
 cron        = require 'cron'
 _           = require 'lodash'
 
-MessageTypes    = require('block-one-common').MessageTypes
-TypesToFuncs    = require('block-one-common').TypesToFuncs
-FuncsToTypes    = require('block-one-common').FuncsToTypes
+MessageTypes    = require('./message-enums').Types
+TypesToFuncs    = require('./message-enums').TypesToFuncs
+FuncsToTypes    = require('./message-enums').FuncsToTypes
 
 defaultPort     = '17077'
 defaultPubPort  = '17088'
@@ -21,7 +21,10 @@ class IPCServer
         @heartbeatCnt = 0
 
         @pubSockets = {}
+        
         @existingAddresses = {}
+
+        @statelessMessageTypes = _.keys TypesToFuncs
         
         if @hbSeconds?
             
@@ -62,11 +65,11 @@ class IPCServer
         func = @serverContext[message.func]
 
         if not _.isFunction func
-            return @reply message.id, message.func, message.type + 1, 'action not registered'
+            return @reply message.id, message.func, message.type + 1, message.arguments, 'action not registered'
 
         func ctx, message.arguments, (error, result) =>
 
-            @reply message.id, message.func, message.type + 1, error, result
+            @reply message.id, message.func, message.type + 1, message.arguments, error, result
 
             
     error : (error) ->
@@ -98,10 +101,14 @@ class IPCServer
             socket.send message
 
 
-    reply : (id, funcName, type = MessageTypes.InvokeSyncReply, error = null, result = undefined) ->
+    reply : (id, funcName, type = MessageTypes.InvokeSyncReply, args, error = null, result = undefined) ->
         
         reply = { type: type, id: id, func: funcName, error : error, res : result }
 
+        #we have to fully retransmit message arguments for correct handling of stateless messages  
+        if @statelessMessageTypes.indexOf(type.toString()) >= 0
+            reply.args = args    
+        
         reply  = @parser.stringify reply
 
         @socket.send reply

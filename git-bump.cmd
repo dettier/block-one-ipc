@@ -8,7 +8,7 @@ echo adding new files..
 call git add .
 
 echo commiting tag..
-call git commit -m "%version%"
+call git commit -a -m "%version%"
 
 echo creating tag %version%..
 call git tag -a %version% -m "%version%"

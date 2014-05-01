@@ -3,9 +3,9 @@ uuid            = require 'node-uuid'
 
 _               = require 'lodash'
 
-MessageTypes    = require('block-one-common').MessageTypes
-TypesToFuncs    = require('block-one-common').TypesToFuncs
-FuncsToTypes    = require('block-one-common').FuncsToTypes
+MessageTypes    = require('./message-enums').Types
+TypesToFuncs    = require('./message-enums').TypesToFuncs
+FuncsToTypes    = require('./message-enums').FuncsToTypes
 
 DEFAULT_SEND_TIMEOUT = 5000
 
@@ -57,8 +57,9 @@ class IPCClient
 
     
     # Метод регистрации коллбэка для реакции на сообщение с определенным типом 
-    on : (funcName, func) -> 
-        @statelessCallbacks[funcName] = func
+    on : (messageType, func) -> 
+        
+        @statelessCallbacks[messageType.toString()] = func
 
 
     onInvokeReply : (parsedMessage) ->
@@ -80,17 +81,22 @@ class IPCClient
         
     onStatelessReply : (parsedMessage) ->
         
-        callback = @statelessCallbacks[parsedMessage.func]
+        handler = @statelessCallbacks[parsedMessage.type.toString()]
+        
+        if handler?
+            handler parsedMessage.error, parsedMessage.res 
+            
+        undefined
         
         
     message : (message) ->
 
         message = message.toString()
         message = @parser.parse message
-
+        
         if message.type == MessageTypes.InvokeSyncReply
             @onInvokeReply message
-        else if @statelessMessageTypes.indexOf(message.type) >= 0
+        else if @statelessMessageTypes.indexOf(message.type.toString()) >= 0
             @onStatelessReply message
         else 
             console.log 'IPClient: Unhandled message: %j', message 
@@ -147,7 +153,8 @@ class IPCClient
             #have to remove callback from registered callbacks hash to avoid second call 
             @callbacks[hashKey] = undefined 
             #and call callback with timeout error
-            callback new Error('Timeout of', @sendTimeout, 'msec exceeded')
+            
+            callback new Error "Timeout of #{@sendTimeout} msec exceeded"
 
         , @sendTimeout
             
